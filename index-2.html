@@ -1,0 +1,689 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>เส้นทางแห่งการรู้จักตัวเอง</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Thai:wght@300;400;600;700&family=Noto+Serif+Thai:wght@300;400;600&display=swap" rel="stylesheet">
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { width: 100%; height: 100%; overflow: hidden; font-family: 'Noto Sans Thai', sans-serif; background: #1a8db5; }
+
+#waterCanvas { position: fixed; inset: 0; width: 100%; height: 100%; z-index: 0; }
+
+/* ── WARP OVERLAY ── */
+#warp {
+  position: fixed; inset: 0; z-index: 100;
+  pointer-events: none; opacity: 0;
+  background: radial-gradient(ellipse at center, #ffffff 0%, #e4f4ff 35%, #a0d4f0 70%, transparent 100%);
+  transition: opacity .4s;
+}
+#warpCanvas {
+  position: fixed; inset: 0; z-index: 99;
+  pointer-events: none; opacity: 0;
+}
+
+#audioBtn {
+  position: fixed; top: 1rem; right: 1rem; z-index: 50;
+  width: 38px; height: 38px; border-radius: 50%;
+  border: 1.5px solid rgba(255,255,255,0.45);
+  background: rgba(255,255,255,0.15); backdrop-filter: blur(8px);
+  color: #fff; font-size: 16px; cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  transition: background .2s;
+}
+#audioBtn:hover { background: rgba(255,255,255,0.28); }
+
+#ui {
+  position: fixed; inset: 0; z-index: 1;
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  padding: 2rem 1.25rem;
+  overflow-y: auto;
+}
+
+.progress-label { color: rgba(255,255,255,0.72); font-size: 0.78rem; letter-spacing: .06em; margin-bottom: .4rem; }
+.progress-track { width: min(300px,80vw); height: 4px; background: rgba(255,255,255,0.22); border-radius: 99px; margin-bottom: 1.8rem; overflow: hidden; }
+.progress-fill { height: 100%; background: rgba(255,255,255,0.85); border-radius: 99px; transition: width .6s ease; }
+
+.card {
+  background: rgba(255,255,255,0.09);
+  backdrop-filter: blur(18px); -webkit-backdrop-filter: blur(18px);
+  border: 1px solid rgba(255,255,255,0.20); border-radius: 20px;
+  padding: 2rem 1.75rem; max-width: 460px; width: 100%;
+  animation: fadeUp .7s ease both;
+}
+@keyframes fadeUp { from { opacity:0; transform:translateY(18px); } to { opacity:1; transform:translateY(0); } }
+
+.scene-line {
+  color: rgba(255,255,255,0.88);
+  font-family: 'Noto Serif Thai', serif;
+  font-size: 1rem; font-weight: 300; line-height: 1.9;
+}
+.scene-line.q {
+  color: rgba(210,238,255,0.85);
+  border-left: 2px solid rgba(255,255,255,0.28);
+  padding-left: .9rem; margin: .2rem 0;
+}
+
+.choices { display: flex; flex-direction: column; gap: .65rem; }
+.choice-btn {
+  background: rgba(255,255,255,0.85); border: none; border-radius: 50px;
+  padding: .85rem 1.4rem; text-align: left;
+  font-size: 0.88rem; font-weight: 600; color: #006e9e;
+  cursor: pointer; font-family: 'Noto Sans Thai', sans-serif;
+  box-shadow: 0 2px 14px rgba(0,80,150,0.12);
+  transition: all .22s; display: flex; align-items: flex-start; gap: .5rem;
+}
+.choice-btn:hover { background: #fff; transform: translateY(-2px) scale(1.01); box-shadow: 0 6px 22px rgba(0,80,150,0.2); }
+.choice-btn .lbl { color: #00b4d8; font-weight: 700; flex-shrink: 0; }
+
+.next-btn {
+  padding: .7rem 2.2rem; border-radius: 50px;
+  border: 1px solid rgba(255,255,255,0.38);
+  background: rgba(255,255,255,0.12); color: rgba(255,255,255,0.9);
+  font-size: 0.9rem; font-family: 'Noto Sans Thai', sans-serif;
+  cursor: pointer; transition: all .22s;
+  margin-top: 1.4rem; display: block; margin-left: auto;
+}
+.next-btn:hover { background: rgba(255,255,255,0.22); transform: translateY(-2px); }
+
+.dot-wrap { display: flex; justify-content: flex-end; margin-top: 1.6rem; }
+.dot-btn {
+  width: 40px; height: 40px; border-radius: 50%;
+  border: 1px solid rgba(255,255,255,0.3);
+  background: rgba(255,255,255,0.10); cursor: pointer;
+  display: flex; align-items: center; justify-content: center; transition: all .22s;
+}
+.dot-btn:hover { background: rgba(255,255,255,0.22); }
+.dot-inner { width: 8px; height: 8px; border-radius: 50%; background: rgba(255,255,255,0.75); animation: pulse 2s infinite; }
+@keyframes pulse { 0%,100%{opacity:.4;transform:scale(1);} 50%{opacity:1;transform:scale(1.35);} }
+
+.lang-btn {
+  width: 100%; padding: .95rem 1.5rem; border-radius: 14px;
+  border: 1px solid rgba(255,255,255,0.28);
+  background: rgba(255,255,255,0.10); color: #fff;
+  font-size: 1.05rem; font-family: 'Noto Sans Thai', sans-serif;
+  cursor: pointer; transition: all .25s;
+  display: flex; align-items: center; gap: 10px;
+}
+.lang-btn:hover { background: rgba(255,255,255,0.20); transform: translateY(-2px); }
+</style>
+</head>
+<body>
+<canvas id="waterCanvas"></canvas>
+<canvas id="warpCanvas"></canvas>
+<div id="warp"></div>
+<button id="audioBtn" title="เปิด/ปิดเสียง">🔇</button>
+<div id="ui"></div>
+
+<script>
+/* =====================================================
+   1. WATER BACKGROUND (WebGL)
+   ===================================================== */
+(function(){
+  var cv = document.getElementById('waterCanvas');
+  var gl = cv.getContext('webgl') || cv.getContext('experimental-webgl');
+  if(!gl){ c2d(cv); return; }
+  var vs = 'attribute vec2 a;void main(){gl_Position=vec4(a,0,1);}';
+  var fs = 'precision mediump float;\
+  uniform vec2 R;uniform float T;\
+  float h(vec2 p){p=fract(p*vec2(234.34,435.345));p+=dot(p,p+34.23);return fract(p.x*p.y);}\
+  float n(vec2 p){vec2 i=floor(p),f=fract(p),u=f*f*(3.-2.*f);return mix(mix(h(i),h(i+vec2(1,0)),u.x),mix(h(i+vec2(0,1)),h(i+vec2(1,1)),u.x),u.y);}\
+  float fbm(vec2 p){float v=0.,a=.5;for(int i=0;i<5;i++){v+=a*n(p);p=p*2.1+vec2(1.7,9.2);a*=.5;}return v;}\
+  void main(){\
+    vec2 uv=gl_FragCoord.xy/R;uv.y=1.-uv.y;\
+    float asp=R.x/R.y;vec2 p=uv*vec2(asp,1.);\
+    float sl=T*.18,md=T*.28;\
+    vec2 f1=vec2(sl*.6,sl*.25),f2=vec2(-sl*.4,sl*.35);\
+    float n1=fbm(p*2.8+f1),n2=fbm(p*4.2-f2+vec2(n1*.6)),n3=fbm(p*1.6+f1*.5+vec2(n2*.4,n1*.3));\
+    float w=n1*.5+n2*.3+n3*.2;\
+    float ca=fbm(p*6.+vec2(md*.8,-md*.5)+vec2(w*1.2));\
+    float sh=pow(ca,2.8)*.22;\
+    float rp=pow(sin((uv.y*38.+n2*5.-sl*2.2)*3.14159)*.5+.5,14.)*.10;\
+    vec3 deep=vec3(.10,.44,.62),mid=vec3(.18,.60,.78),surf=vec3(.42,.78,.90);\
+    vec3 col=mix(deep,mid,w);col=mix(col,surf,uv.y*.38);col+=sh+rp;\
+    col*=1.-.28*length(uv-.5);\
+    gl_FragColor=vec4(clamp(col,0.,1.),1.);\
+  }';
+  function mk(t,s){var x=gl.createShader(t);gl.shaderSource(x,s);gl.compileShader(x);return x;}
+  var pg=gl.createProgram();
+  gl.attachShader(pg,mk(gl.VERTEX_SHADER,vs));
+  gl.attachShader(pg,mk(gl.FRAGMENT_SHADER,fs));
+  gl.linkProgram(pg);gl.useProgram(pg);
+  var buf=gl.createBuffer();gl.bindBuffer(gl.ARRAY_BUFFER,buf);
+  gl.bufferData(gl.ARRAY_BUFFER,new Float32Array([-1,-1,1,-1,-1,1,1,1]),gl.STATIC_DRAW);
+  var ap=gl.getAttribLocation(pg,'a');gl.enableVertexAttribArray(ap);gl.vertexAttribPointer(ap,2,gl.FLOAT,false,0,0);
+  var uR=gl.getUniformLocation(pg,'R'),uT=gl.getUniformLocation(pg,'T'),tt=0;
+  function rsz(){cv.width=cv.offsetWidth;cv.height=cv.offsetHeight;gl.viewport(0,0,cv.width,cv.height);gl.uniform2f(uR,cv.width,cv.height);}
+  rsz(); window.addEventListener('resize',rsz);
+  (function lp(){tt+=.016;gl.uniform1f(uT,tt);gl.drawArrays(gl.TRIANGLE_STRIP,0,4);requestAnimationFrame(lp);})();
+  function c2d(c){var cx=c.getContext('2d'),W,H,t2=0;function r(){W=c.width=c.offsetWidth;H=c.height=c.offsetHeight;}r();window.addEventListener('resize',r);(function l(){t2+=.012;var g=cx.createLinearGradient(0,0,0,H);g.addColorStop(0,'#1a8db5');g.addColorStop(.5,'#2aadd4');g.addColorStop(1,'#4ec8e0');cx.fillStyle=g;cx.fillRect(0,0,W,H);for(var i=0;i<H;i+=4){var w=Math.sin(i*.03+t2)*6+Math.sin(i*.07+t2*1.3)*3,a=.025+.02*Math.sin(i*.05+t2*.7);cx.fillStyle='rgba(255,255,255,'+a+')';cx.fillRect(w,i,W,3);}requestAnimationFrame(l);})();}
+})();
+
+/* =====================================================
+   2. PIANO AUDIO (Web Audio API — no files needed)
+   ===================================================== */
+var AudioEng = (function(){
+  var ctx,gain,rev,playing=false,tim;
+  var NOTES=[261.63,293.66,329.63,392,440,392,329.63,293.66,261.63,220,261.63,293.66,329.63,392,440,392];
+  var idx=0;
+  function mkRev(ac,dur){var r=ac.sampleRate,len=r*dur,buf=ac.createBuffer(2,len,r);for(var ch=0;ch<2;ch++){var d=buf.getChannelData(ch);for(var i=0;i<len;i++)d[i]=(Math.random()*2-1)*Math.pow(1-i/len,2.5);}var cv=ac.createConvolver();cv.buffer=buf;return cv;}
+  function note(f){var now=ctx.currentTime,o1=ctx.createOscillator(),o2=ctx.createOscillator(),o3=ctx.createOscillator();o1.type='triangle';o1.frequency.value=f;o2.type='sine';o2.frequency.value=f*2.002;o3.type='sine';o3.frequency.value=f*.499;var e=ctx.createGain();e.gain.setValueAtTime(0,now);e.gain.linearRampToValueAtTime(.28,now+.012);e.gain.exponentialRampToValueAtTime(.001,now+2.2);[o1,o2,o3].forEach(function(o){o.connect(e);o.start(now);o.stop(now+2.5);});e.connect(rev);e.connect(gain);}
+  function next(){note(NOTES[idx%NOTES.length]);idx++;tim=setTimeout(next,1400+(Math.random()-.5)*300);}
+  return{
+    start:function(){if(playing)return;ctx=new(window.AudioContext||window.webkitAudioContext)();gain=ctx.createGain();gain.gain.value=0.18;gain.connect(ctx.destination);rev=mkRev(ctx,3.5);rev.connect(gain);playing=true;next();},
+    stop:function(){if(!playing)return;clearTimeout(tim);if(ctx)ctx.close();playing=false;},
+    toggle:function(){playing?this.stop():this.start();return playing;}
+  };
+})();
+document.getElementById('audioBtn').addEventListener('click',function(){
+  this.textContent = AudioEng.toggle() ? '🔊' : '🔇';
+});
+
+/* =====================================================
+   3. WARP LIGHT ENDING EFFECT
+   ===================================================== */
+function triggerWarp(cb){
+  var wc = document.getElementById('warpCanvas');
+  var wDiv = document.getElementById('warp');
+  wc.width = window.innerWidth;
+  wc.height = window.innerHeight;
+  var cx = wc.getContext('2d');
+  var W = wc.width, H = wc.height;
+  var CX = W/2, CY = H/2;
+
+  /* generate light streaks radiating from center */
+  var streaks = [];
+  for(var i=0; i<260; i++){
+    var ang = Math.random() * Math.PI * 2;
+    streaks.push({
+      ang: ang,
+      startDist: 10 + Math.random()*60,
+      len: 4 + Math.random()*18,
+      speed: 3 + Math.random()*9,
+      op: 0.3 + Math.random()*0.7,
+      w: 0.5 + Math.random()*1.5
+    });
+  }
+
+  var t = 0, totalFrames = 130;
+  wc.style.opacity = '1';
+  wDiv.style.transition = 'none';
+  wDiv.style.opacity = '0';
+
+  function frame(){
+    t++;
+    var prog = t / totalFrames;
+    cx.clearRect(0, 0, W, H);
+
+    /* dark vignette fades out as we accelerate */
+    cx.fillStyle = 'rgba(0,30,60,' + Math.max(0, 0.3*(1-prog*2)) + ')';
+    cx.fillRect(0, 0, W, H);
+
+    streaks.forEach(function(s){
+      var accel = prog * prog;
+      var dist = s.startDist + accel * 600 * s.speed * 0.08;
+      var stretchLen = s.len + accel * 400;
+      var x1 = CX + Math.cos(s.ang) * dist;
+      var y1 = CY + Math.sin(s.ang) * dist;
+      var x2 = CX + Math.cos(s.ang) * (dist + stretchLen);
+      var y2 = CY + Math.sin(s.ang) * (dist + stretchLen);
+      var alpha = s.op * Math.min(prog * 5, 1) * (prog < 0.8 ? 1 : (1 - prog) * 5);
+      if(alpha <= 0) return;
+
+      var grad = cx.createLinearGradient(x1, y1, x2, y2);
+      grad.addColorStop(0, 'rgba(255,255,255,0)');
+      grad.addColorStop(0.4, 'rgba(255,255,255,' + alpha + ')');
+      grad.addColorStop(1, 'rgba(220,240,255,' + (alpha*0.6) + ')');
+
+      cx.beginPath();
+      cx.moveTo(x1, y1);
+      cx.lineTo(x2, y2);
+      cx.strokeStyle = grad;
+      cx.lineWidth = s.w + accel * 2;
+      cx.stroke();
+    });
+
+    /* white flash bloom */
+    if(prog > 0.65){
+      var bloom = (prog - 0.65) / 0.35;
+      var rg = cx.createRadialGradient(CX, CY, 0, CX, CY, W * 0.8);
+      rg.addColorStop(0, 'rgba(255,255,255,' + bloom + ')');
+      rg.addColorStop(0.5, 'rgba(220,240,255,' + bloom * 0.6 + ')');
+      rg.addColorStop(1, 'rgba(255,255,255,0)');
+      cx.fillStyle = rg;
+      cx.fillRect(0, 0, W, H);
+    }
+
+    /* final overlay flash */
+    if(prog > 0.85){
+      var flashA = (prog - 0.85) / 0.15;
+      wDiv.style.opacity = flashA;
+    }
+
+    if(t < totalFrames){
+      requestAnimationFrame(frame);
+    } else {
+      /* hold white, then dissolve into ending scene */
+      wDiv.style.transition = 'opacity 1.4s ease';
+      wDiv.style.opacity = '1';
+      setTimeout(function(){
+        wDiv.style.opacity = '0';
+        wc.style.opacity = '0';
+        if(cb) cb();
+      }, 1400);
+    }
+  }
+  frame();
+}
+
+/* =====================================================
+   4. LANGUAGE STATE
+   ===================================================== */
+var currentLang = 'th'; // 'th' | 'en'
+
+/* =====================================================
+   4. GAME SCENES
+   ─────────────────────────────────────────────────────
+   type: 'lang'    → language selector
+   type: 'narrate' → text only, dot button to continue
+   type: 'choice'  → A/B choice, auto-advance
+   type: 'single'  → text + single button (no choice)
+   type: 'ending'  → final screen
+   ===================================================== */
+var SCENES_TH = [
+
+  /* ── 0: language select ── */
+  { type: 'lang' },
+
+  /* ── 1 ── */
+  {
+    type: 'narrate',
+    lines: [
+      'คุณลืมตาขึ้นมาจากการเดินทางอันเหน็ดเหนื่อย',
+      'คุณพบว่าคุณนั้นไม่ใช่ทั้งแกะดำหรือแกะขาวในพื้นที่นี้',
+      'จะเป็นคนนอกรัฐก็ไม่ใช่ ในรัฐแห่งนี้ก็ไม่เชิง',
+    ]
+  },
+
+  /* ── 2 ── */
+  {
+    type: 'narrate',
+    lines: [
+      'สิทธิที่ตัวของคุณมี เป็นสิทธิที่คนทั่วไปในรัฐมีหรือเปล่า',
+      'หากชีวิตคุณไม่เคยเข้าถึงหรือรับรู้ถึงคำว่าสิทธิตั้งแต่แรก เลยกันแน่นะ...',
+      'คุณได้แต่คิดสงสัย',
+    ]
+  },
+
+  /* ── 3 ── */
+  {
+    type: 'choice',
+    lines: [
+      'คำพูดมากมายที่คุณนั้นได้ยิน',
+      '" 555 สิ่งพวกนี้คนในรัฐเขาได้กันทุกคนอยู่แล้ว คุณไม่ได้รับหรอ? "',
+      'ใช่ คุณไม่ได้รับ ถ้าแบบนั้นพื้นที่ที่คุณอยู่เติบโตมานี้ ไม่ใช่ที่ๆ ของคุณใช่ไหม',
+      'คุณเป็นแค่คนนอกที่มายืมที่เขาอยู่เพียงเท่านั้นหรอ',
+      'แล้วถ้าเป็นแบบนี้ คุณจะเชื่อในคำพูดเหล่านั้นไหม ที่คนทุกคนในรัฐได้รับสิทธิพวกนั้น',
+    ],
+    choices: [
+      { text: 'เชื่อสิ เชื่ออยู่แล้ว ก็เราอยู่ในรัฐนี้เหมือนทุกๆ คนนี่หน่า..' },
+      { text: 'ไม่.. คุณไม่เคยเชื่อเลย เพราะคุณไม่ได้ ก็ชัดเจนแล้วหนิ ว่าพวกเขาผลักเราให้เป็นเพียงคนนอก' },
+    ]
+  },
+
+  /* ── 4 ── */
+  {
+    type: 'choice',
+    lines: [
+      'คุณเดินทางผ่านเวลาชีวิตมามากมาย คุณเป็นเพียงมนุษย์ที่ยังมีแพชชั่น และความฝันในจิตใจอันแรงกล้า',
+      'กุญแจดอกแรกที่จะเปิดประตูความสำเร็จคือการเรียนรู้',
+      '" ฉันมีฝัน ฝันที่จะอยากเรียน แต่..ตัวฉันมีสิทธินั้นหรือเปล่านะ.. สิทธิที่จะได้เข้าเรียน "',
+    ],
+    choices: [
+      { text: 'มีสิ! ฉันจะไปสมัครเรียน เพราะสิทธิการศึกษาและความฝันนี้มันเป็นของฉัน ใครจะพรากมันไปจากฉันได้ล่ะ!' },
+      { text: 'ถึงแม้นั่นจะเป็นความใฝ่ฝันของฉัน แต่ฉันก็คงจะทำได้แค่ฝัน เพราะสุดท้ายก็มีแค่คน "ของ" รัฐนี้เท่านั้นที่จะมีได้' },
+    ]
+  },
+
+  /* ── 5 ── */
+  {
+    type: 'choice',
+    lines: [
+      'ช่วงชีวิตหนึ่ง คุณไม่อาจหลีกพ้นต่อวัฏจักรแห่งการเจ็บป่วย',
+      '" อ่า.. วันนี้ก็ปวดหัวอีกแล้วสิ แต่มันก็ปวดจนแทบจะทนไม่ไหวเลยแหะ "',
+      'คุณเชื่อว่าคุณเข้าถึงสิทธิการรักษาของรัฐได้ไหม',
+    ],
+    choices: [
+      { text: 'ทนไม่ไหวแล้ว ตัดสินใจไปพบแพทย์ เพราะเชื่อมั่นว่าคนทุกคนสามารถเข้าถึงสิทธิการรักษาได้' },
+      { text: 'ต่อให้อาการหนักก็ต้องซื้อยาเองหรือไปคลินิก เพราะตนเองไม่ใช่คนในรัฐ คงเข้าถึงสิทธิไม่ได้' },
+    ]
+  },
+
+  /* ── 6 ── */
+  {
+    type: 'choice',
+    lines: [
+      'คุณเดินทางผ่านมาถึงช่วงกลางของชีวิต อาการปวดหัวที่เคยรับไหวกลายเป็นปวดหัวเพราะเนื้องอก',
+      'ค่ารักษามากมาย ความรับผิดชอบต่างๆ ไม่อาจหลีกเลี่ยง คุณมองไปทางไหนก็ช่างมืดแปดด้าน',
+      'จนแสงสว่างนั้นมีขึ้น...',
+      '" สิทธิการรักษา 30 บาท รักษาทุกโรค "',
+      'แล้วตัวคุณจะเชื่อไหมว่ามีสิทธิที่จะใช้มัน',
+    ],
+    choices: [
+      { text: 'เชื่อสิ ยังไงมันก็ต้องใช้ได้ เพราะสวัสดิการนี้ทุกคนควรจะเข้าถึงได้' },
+      { text: 'ไม่หรอก มันก็คงเป็นแค่สิ่งขายฝันสำหรับคนนอกอย่างเราๆ ที่ไม่เคยถูกนับว่าเป็นคนในรัฐ' },
+    ]
+  },
+
+  /* ── 7 ── */
+  {
+    type: 'single',
+    lines: [
+      'สุดท้ายชีวิตคุณก็ยังคงต้องเดินหน้าต่อไป ด้วยความฝันและความหวังทั้งหมดที่เหลืออยู่',
+      'อนาคตที่สดใสกำลังรอคุณอยู่ หากในพื้นที่นี้ไม่สามารถให้คุณได้ งั้นพื้นที่อื่นอาจจะให้คุณได้ชีวิตที่ดี',
+      '" ฉันจะไปเรียนต่อต่างประเทศ แต่คงต้องทำ visa ก่อนสินะ "',
+      '" ต้องขออภัยด้วยนะคะ ตัวคุณไม่สามารถทำ visa ได้ เนื่องจากคุณไม่มีรัฐเป็นของตนเอง "',
+    ],
+    btn: 'ต่อไป'
+  },
+
+  /* ── 8 ── */
+  {
+    type: 'choice',
+    lines: [
+      'เรื่องราวต่างๆ ที่คุณพบเจอและได้รับ มันค่อยๆ กัดเซาะตัวตนและจิตใจของคุณ',
+      'คำถามมากมายว่าเรานั้นเป็นของรัฐนี้หรือเปล่า พื้นที่ที่อยู่และเติบโตของเรา มันใช่ที่ที่เราจะอยู่ได้จริงไหม',
+      'จากคำถามมากมายความสงสัยมากล้น คุณรวบรวมความกล้าออกไปยืนหยัดเรียกร้องสิทธิต่างๆ ที่คุณไม่เคยได้รับ',
+    ],
+    choices: [
+      { text: 'ไม่ว่าเส้นทางนั้นจะยากแค่ไหน แต่คุณก็จะยืนหยัดเรียกร้องต่อสิทธิของคุณอย่างไม่หวาดกลัว' },
+      { text: 'สิ่งที่คุณพบเจอมันค่อยๆ ดับไฟนั้น จนวันนี้คุณเหลือเพียงความกลัวและสิ้นหวังต่อการเรียกร้องที่ไม่อาจเปลี่ยนแปลงอะไรได้' },
+    ]
+  },
+
+  /* ── 9 (กดเพียงปุ่มเดียว → warp) ── */
+  {
+    type: 'single',
+    isWarp: true,
+    lines: [
+      'สุดท้ายแล้วการเดินทางช่วงชีวิตหนึ่งของคุณ ทั้งความฝัน ความหวัง และแรงใจอันแกร่งกล้า',
+      'สิ่งพวกนี้มันสามารถถูกพรากไปเพียงเพราะประโยคที่ว่า " คุณไม่ใช่คนของรัฐ " นั้นได้จริงๆ น่ะเหรอ',
+      'สิทธิในการมีชีวิตที่ดี ทำในสิ่งที่อยากจะทำ มันหายไปในพริบตาเพียงเพราะคำๆ นั้น',
+      'คุณพร้อมที่จะเรียกร้องและท้วงคืนสิ่งที่ถูกพรากไปเหล่านี้แล้วหรือยัง',
+    ],
+    btn: '✦  พร้อมแล้ว — ฉันจะเรียกร้อง  ✦'
+  },
+
+  /* ── 10: ending ── */
+  { type: 'ending' }
+];
+
+var SCENES_EN = [
+
+  /* ── 0: language select ── */
+  { type: 'lang' },
+
+  /* ── 1 ── */
+  {
+    type: 'narrate',
+    lines: [
+      'You open your eyes from a long and exhausting journey.',
+      'You find that you are neither an outsider nor someone who truly belongs here.',
+      'Not quite outside this state, but never fully within it.',
+    ]
+  },
+
+  /* ── 2 ── */
+  {
+    type: 'narrate',
+    lines: [
+      'Do you have the same rights as everyone else in this state?',
+      'If your life has never known what the word rights even means...',
+      'You can only wonder.',
+    ]
+  },
+
+  /* ── 3 ── */
+  {
+    type: 'choice',
+    lines: [
+      'So many things people have said around you.',
+      '"Haha, everyone in the state gets those things. You don\'t?"',
+      'You don\'t. So does that mean this place where you grew up was never really yours?',
+      'Are you just an outsider borrowing someone else\'s land?',
+      'Will you believe what they say — that everyone here has those rights?',
+    ],
+    choices: [
+      { text: 'Yes. We all live in this state just the same, right?' },
+      { text: 'No. I never believed it. I don\'t have them, and that says everything.' },
+    ]
+  },
+
+  /* ── 4 ── */
+  {
+    type: 'choice',
+    lines: [
+      'You have come a long way. You are still a person with passion and a dream burning inside.',
+      'The first key to any future is education.',
+      '"I want to study. But do I even have the right to enroll?"',
+    ],
+    choices: [
+      { text: 'Yes. I\'ll go and enroll. This dream is mine and nobody can take it.' },
+      { text: 'Even if it\'s what I want most, I can only wish. Only people who truly belong here can have it.' },
+    ]
+  },
+
+  /* ── 5 ── */
+  {
+    type: 'choice',
+    lines: [
+      'At some point in life, illness finds everyone.',
+      '"My head has been pounding again. It\'s almost too much to bear."',
+      'Do you think you can access healthcare through the state?',
+    ],
+    choices: [
+      { text: 'I can\'t take it anymore. I\'ll go see a doctor. Everyone has the right to medical care.' },
+      { text: 'No matter how bad it gets, I\'ll buy medicine myself. I\'m not a citizen. Those rights aren\'t mine.' },
+    ]
+  },
+
+  /* ── 6 ── */
+  {
+    type: 'choice',
+    lines: [
+      'Years pass. The headaches you once pushed through have turned into a tumor.',
+      'The costs are piling up. The responsibilities won\'t stop. Everywhere you look feels dark.',
+      'Then you see it...',
+      '"30-Baht Universal Healthcare. Every illness covered."',
+      'Do you believe you have the right to use it?',
+    ],
+    choices: [
+      { text: 'Yes. It has to cover me too. This kind of welfare should be for everyone.' },
+      { text: 'No. Just another promise that was never meant for people like us.' },
+    ]
+  },
+
+  /* ── 7 ── */
+  {
+    type: 'single',
+    lines: [
+      'Still, life has to move forward. You hold onto whatever dreams and hope are left.',
+      'Maybe this place can\'t give you what you need. Maybe somewhere else can.',
+      '"I want to study abroad. I just need to get a visa first."',
+      '"I\'m sorry, but you cannot apply for a visa. You have no state of your own."',
+    ],
+    btn: 'Continue'
+  },
+
+  /* ── 8 ── */
+  {
+    type: 'choice',
+    lines: [
+      'Everything you have been through has slowly worn you down.',
+      'Do I really belong here? Is this place I grew up in somewhere I can actually stay?',
+      'Through all the doubt, you pull together what courage you have left and decide to stand up for what you never received.',
+    ],
+    choices: [
+      { text: 'No matter how hard it gets, you will keep pushing and fight for your rights.' },
+      { text: 'Too much has happened. The fire is gone. What\'s left is fear and the feeling that nothing will ever change.' },
+    ]
+  },
+
+  /* ── 9 (single button → warp) ── */
+  {
+    type: 'single',
+    isWarp: true,
+    lines: [
+      'All of it. The dreams, the hope, the strength you carried through your whole life.',
+      'Can it really all be taken away by five words: "You don\'t belong to this state"?',
+      'The right to a decent life, to go after what you want — gone, just like that.',
+      'Are you ready to take it back?',
+    ],
+    btn: '✦  I am ready  ✦'
+  },
+
+  /* ── 10: ending ── */
+  {
+    type: 'ending',
+    lines_en: true
+  }
+];
+
+var SCENES = SCENES_TH;
+
+/* =====================================================
+   5. GAME ENGINE
+   ===================================================== */
+var sceneIdx = 0;
+
+function isQ(l){
+  return l.startsWith('"') || l.startsWith('\u201c') || l.startsWith('...');
+}
+
+function mkLines(lines, delay){
+  return lines.map(function(l, i){
+    var q = isQ(l);
+    return '<p class="scene-line'+(q?' q':'')+'" style="animation:fadeUp .7s '+(delay+i*.15)+'s ease both;opacity:0;">'+l+'</p>';
+  }).join('');
+}
+
+function render(){
+  var ui = document.getElementById('ui');
+  ui.innerHTML = '';
+
+  /* ── Language Select ── */
+  if(sceneIdx === 0){
+    ui.innerHTML =
+      '<div class="card" style="max-width:380px;">'
+      + '<p style="color:rgba(255,255,255,0.45);font-size:.75rem;letter-spacing:.18em;text-transform:uppercase;margin-bottom:1.2rem;">Language / ภาษา</p>'
+      + '<h1 style="color:#fff;font-size:1.6rem;font-weight:300;font-family:\'Noto Serif Thai\',serif;line-height:1.4;margin-bottom:.3rem;">เส้นทางแห่งการรู้จักตัวเอง</h1>'
+      + '<p style="color:rgba(200,230,255,0.5);font-size:.88rem;margin-bottom:2rem;">A Journey of Self-Discovery</p>'
+      + '<div style="display:flex;flex-direction:column;gap:.8rem;">'
+      + '<button class="lang-btn" onclick="setLang(\'th\')">🇹🇭 &nbsp;ภาษาไทย</button>'
+      + '<button class="lang-btn" onclick="setLang(\'en\')">🇬🇧 &nbsp;English</button>'
+      + '</div></div>';
+    return;
+  }
+
+  var scene = SCENES[sceneIdx];
+  if(!scene) return;
+
+  /* progress (scenes 1–9) */
+  var total = 9, cur = Math.min(sceneIdx, total);
+  var pct = Math.round((cur / total) * 100);
+  var progLabel = currentLang === 'en' ? 'Page ' + cur + ' / ' + total : 'หน้าที่ ' + cur + ' / ' + total;
+  var prog = scene.type !== 'ending'
+    ? '<p class="progress-label">' + progLabel + '</p>'
+      + '<div class="progress-track"><div class="progress-fill" style="width:'+pct+'%"></div></div>'
+    : '';
+
+  var inner = '';
+
+  /* NARRATE */
+  if(scene.type === 'narrate'){
+    inner = '<div style="display:flex;flex-direction:column;gap:.8rem;margin-bottom:.5rem;">'+mkLines(scene.lines,0)+'</div>'
+          + '<div class="dot-wrap"><button class="dot-btn" onclick="go('+(sceneIdx+1)+')"><div class="dot-inner"></div></button></div>';
+  }
+
+  /* CHOICE */
+  if(scene.type === 'choice'){
+    var labels = ['A','B','C','D'];
+    var btns = scene.choices.map(function(c, i){
+      return '<button class="choice-btn" style="animation:fadeUp .7s '+(scene.lines.length*.15+i*.15)+'s ease both;opacity:0;" onclick="pick('+i+')">'
+           + '<span class="lbl">'+labels[i]+')</span>'+c.text+'</button>';
+    }).join('');
+    inner = '<div style="display:flex;flex-direction:column;gap:.75rem;margin-bottom:1.4rem;">'+mkLines(scene.lines,0)+'</div>'
+          + '<div class="choices">'+btns+'</div>';
+  }
+
+  /* SINGLE */
+  if(scene.type === 'single'){
+    var onclick = scene.isWarp ? 'warpEnd()' : 'go('+(sceneIdx+1)+')';
+    inner = '<div style="display:flex;flex-direction:column;gap:.85rem;">'+mkLines(scene.lines,0)+'</div>'
+          + '<button class="next-btn" onclick="'+onclick+'" style="'+(scene.isWarp?'background:rgba(255,255,255,0.18);border-color:rgba(255,255,255,0.6);letter-spacing:.04em;':'')+'">'+scene.btn+'</button>';
+  }
+
+  /* ENDING */
+  if(scene.type === 'ending'){
+    var isEN = currentLang === 'en';
+    var endTitle = isEN ? 'Journey\'s End' : 'จบการเดินทาง';
+    var endLines = isEN
+      ? ['And that was your life.',
+         'A life that went through things most people never have to face.',
+         'But one that still carried a heart, dreams, and hope.',
+         'You are not alone in this.']
+      : ['และนั่นคือชีวิตของคุณ',
+         'ชีวิตที่ต้องเดินทางผ่านสิ่งที่คนทั่วไปไม่เคยเจอ',
+         'แต่ก็ยังคงมีหัวใจ มีฝัน และมีความหวัง',
+         '— คุณไม่ได้อยู่คนเดียวในการเดินทางนี้ —'];
+    var restartLabel = isEN ? 'Start Again' : 'เริ่มใหม่อีกครั้ง';
+    inner =
+      '<div style="text-align:center;padding:.5rem 0;">'
+      + '<div style="width:54px;height:54px;border-radius:50%;border:1px solid rgba(255,255,255,0.3);margin:0 auto 1.4rem;display:flex;align-items:center;justify-content:center;animation:fadeUp .6s ease both;">'
+      + '<div style="width:18px;height:18px;border-radius:50%;background:rgba(210,240,255,0.6);"></div></div>'
+      + '<h2 style="color:#fff;font-family:\'Noto Serif Thai\',serif;font-size:1.5rem;font-weight:600;margin-bottom:1.6rem;text-shadow:0 2px 14px rgba(0,60,120,0.4);animation:fadeUp .7s .1s ease both;opacity:0;">' + endTitle + '</h2>'
+      + '<div style="display:flex;flex-direction:column;gap:.9rem;margin-bottom:2rem;">'
+      + mkLines(endLines, 0.2)
+      + '</div>'
+      + '<button class="next-btn" onclick="go(0)" style="margin:0 auto;">' + restartLabel + '</button>'
+      + '</div>';
+  }
+
+  ui.innerHTML = prog + '<div class="card">'+inner+'</div>';
+}
+
+/* navigation */
+window.setLang = function(lang){
+  currentLang = lang;
+  SCENES = lang === 'en' ? SCENES_EN : SCENES_TH;
+  sceneIdx = 1;
+  render();
+};
+window.go   = function(idx){
+  sceneIdx = idx;
+  if(idx === 0){
+    currentLang = 'th';
+    SCENES = SCENES_TH;
+  }
+  render();
+};
+window.pick = function(i){
+  var btns = document.querySelectorAll('.choice-btn');
+  if(btns[i]) btns[i].style.background = 'rgba(200,235,255,0.95)';
+  setTimeout(function(){ go(sceneIdx+1); }, 480);
+};
+window.warpEnd = function(){
+  document.getElementById('ui').style.pointerEvents = 'none';
+  triggerWarp(function(){
+    sceneIdx = SCENES.length - 1;
+    render();
+    document.getElementById('ui').style.pointerEvents = '';
+  });
+};
+
+render();
+</script>
+</body>
+</html>
